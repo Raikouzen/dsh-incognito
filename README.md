@@ -1,100 +1,206 @@
 # dsh-incognito
 
-An incognito session plugin for DeepSeek Harness (DSH). It opens an
-**independent temporary agent** in a floating window beside the composer:
+Incognito sessions for **DeepSeek Harness**: one click opens an independent,
+temporary agent in a floating window. It has its own context, its own working
+directory, and its own toolset — and it is destroyed when the window closes.
 
 Repository: <https://github.com/Raikouzen/dsh-incognito>
 
-![Incognito window](docs/incognito-window.png)
+![Incognito window with a completed reply](docs/incognito-window.png)
 
-- one-click glasses button next to the composer plus
-- the composer input bar switches to a dedicated incognito input bar
-- the agent has its own agent preset, own prompt, own tool composition, and a
-  fresh temporary working directory
-- no context, memory, messages, or prompts are inherited from the resident session
-- full DSH toolset: shell, file read/write/search, background jobs, skills,
-  goals, subagent, workflow, Ralph, web search/fetch
-- closing the window fades it out over **5 seconds**; cleanup runs only after
-  that fade. Clicking anywhere in the window during the fade cancels the close
-  and restores full visibility, so the session and its contents remain usable.
-- when the fade completes, the agent is disposed and its session log, temp
-  working directory, and workspace/cache references are removed
-- page refresh and host restart sweep orphaned incognito directories
+*An incognito agent answering in the floating window. The resident conversation
+received no message, tool call, or transcript row.*
+
+## Features
+
+### One-click activation
+
+- A glasses button sits beside the composer `+`.
+- The floating window opens immediately and the composer switches to a
+  dedicated incognito input bar.
+- The window is draggable and is positioned in the left gutter so the full
+  incognito input bar stays visible.
+
+### Complete isolation
+
+- Every session mounts a private `incognito` agent preset.
+- No parent seed, no inherited transcript, no parent memory, and no inherited
+  persona.
+- The working directory is a dedicated temporary directory outside every
+  registered DSH workspace.
+- The session is created as `origin: "subagent"` without `parentSession`, so
+  root-only memory hooks do not attach to it.
+
+### Full toolset
+
+| Area | Included tools |
+| --- | --- |
+| Shell | `pwsh` on Windows, `bash` elsewhere |
+| Files | read, write, edit, glob, grep |
+| Background work | jobs |
+| Skills | filesystem skill catalog and `skill` |
+| Goals | goal tool |
+| Delegation | `subagent`, `subagent_fork`, subagent control |
+| Orchestration | workflow and Ralph |
+| Web | search and `web_fetch` |
+| Session | todo, ask-user |
+
+### Lifecycle
+
+- Clicking close fades the window for **five seconds** before anything is
+  deleted.
+- Clicking anywhere inside the window during the fade cancels the close,
+  restores full visibility, and leaves the session usable.
+- After the fade, the agent is disposed and its session directory and
+  temporary working directory are removed. Projection-cache and workspace
+  references are guarded and cleaned as well.
+- Page refresh and host restart sweep orphaned incognito directories.
+- Readiness is fail-closed: if the projection cache cannot be guarded, the
+  entry button refuses to open a session.
+
+### Privacy
+
+- The resident session never receives an incognito message, tool call, or
+  transcript row. The browser talks to the plugin's own
+  `/api/dsh-incognito/*` routes; the host creates the agent directly with
+  `ctx.agents.create`.
+- The temporary working directory is the session's sandbox boundary. Child
+  agents created by the incognito agent use the same project directory, and
+  their logs are deleted with it.
+- DSH's projection cache is patched to skip incognito ids, so titles, token
+  counts, and last-prompt checkpoints are not written.
+- The plugin does not write its window state or drafts to `localStorage`,
+  `sessionStorage`, or IndexedDB.
+- A close, refresh, or restart leaves no incognito session directory, temporary
+  working directory, projection-cache file, or workspace id behind.
+
+## Screenshots
+
+| Entry button | Incognito input bar |
+| --- | --- |
+| ![Glasses button beside the composer plus](docs/entry-button.png) | ![Dedicated incognito composer bar](docs/incognito-composer.png) |
+
+The glasses button sits beside the normal composer controls. While a session
+is open, the stock composer is replaced by the incognito bar so typed text
+cannot fall through to the resident conversation.
 
 ## Install
 
-From GitHub, point the Web plugin manager at
-`https://github.com/Raikouzen/dsh-incognito`, or install the package spec:
+The easiest path is the Web plugin manager: add
+`https://github.com/Raikouzen/dsh-incognito`, select the `dsh-incognito`
+bundle, and restart DSH.
+
+From a shell:
 
 ```sh
 dsh plugin --profile web add github:Raikouzen/dsh-incognito
 ```
 
-Then select it as a profile bundle in the Web plugin manager and restart DSH.
+Then select `dsh-incognito` as a profile bundle in the Web plugin manager and
+restart DSH. The bundle patch declares both the host module and the `incognito`
+agent preset.
 
-From a local checkout, install it as a profile bundle:
+From a local checkout:
 
 ```sh
 dsh plugin --profile web add file:/absolute/path/to/dsh-incognito
 ```
 
-Then restart DSH. The plugin's bundle patch declares both the host module and
-the `incognito` agent preset. The host module must be selected as a profile
-bundle (the Web plugin manager does this automatically for bundles).
-
-For a development install in the Web profile:
+For development:
 
 ```sh
 cd ~/.dsh/profiles/web
 pnpm add file:/absolute/path/to/dsh-incognito
 ```
 
-and make sure `dsh-incognito` is present in `package.json`'s
-`dsh.profile.bundles` (the Web plugin manager's install action does this).
-Restart DSH after changing host code.
+Make sure `dsh-incognito` is present in `package.json`'s
+`dsh.profile.bundles`, then restart DSH after changing host code.
 
 ## Usage
 
-1. Click the glasses icon next to the plus button in the composer.
+1. Click the glasses icon beside the composer `+`.
 2. A floating incognito window opens and the input bar switches to the
-   incognito bar. Type there and press Enter.
-3. Click the × to close. The window fades for five seconds. Click anywhere in
-   the window before the fade ends to keep the session.
-4. After the fade, the temporary agent and its disk artifacts are destroyed.
+   incognito bar.
+3. Type a message and press Enter. `Shift+Enter` inserts a newline.
+4. Close the window with `×`. The window fades for five seconds; click anywhere
+   inside it before the fade ends to keep the session.
+5. Once the fade completes, the agent and its local artifacts are removed.
 
-## Privacy model
+## How it works
 
-- The resident session never receives a message, tool call, or transcript row
-  from the incognito agent. The browser talks to the plugin's own `/api/dsh-incognito/*`
-  routes; the host creates the agent directly with `ctx.agents.create`.
-- The incognito session uses `origin: "subagent"`, no `parentSession`, no seed,
-  and a private preset, so it starts with an empty transcript and its own
-  persona. Global memory plugins that only observe root sessions do not attach to it.
-- The working directory is `%TEMP%/dsh-incognito/session-incognito-<uuid>` (or
-  the platform temp equivalent), outside every registered DSH workspace. The
-  session's sandbox `workspace-write` boundary is that directory.
-- DSH's projection cache is patched to skip incognito ids, so titles, token
-  counts, and last-user-prompt checkpoints are not written to
-  `~/.dsh/storages/session_projcache/`.
-- On close/boot/refresh, the host deletes:
-  - the temp working directory
-  - `~/.dsh/sessions/<project-key>/` for that cwd (this includes any child
-    subagent logs created from the incognito session)
-  - workspace accounting/archived/pinned references for the id if any listener
-    attached the session
-- The model provider still sees the conversation as a normal API request.
-  Tool-written files outside the temp directory, provider-side logs, and
-  aggregate billing meters are outside the plugin's control.
+```mermaid
+sequenceDiagram
+  autonumber
+  actor U as User
+  participant C as Incognito composer
+  participant H as dsh-incognito host
+  participant A as Isolated agent
 
-## Layout
-
+  U->>C: Click the glasses button
+  C->>H: POST /api/dsh-incognito/open
+  H->>A: agents.create(own preset, temp cwd)
+  A-->>H: live session
+  H-->>C: session id
+  U->>C: Send a message
+  C->>H: POST /api/dsh-incognito/send
+  H->>A: followup()
+  loop while the agent is running
+    C->>H: POST /api/dsh-incognito/poll
+    H-->>C: live text and activity
+  end
+  U->>C: Click close
+  C->>C: 5 second fade (click cancels)
+  C->>H: POST /api/dsh-incognito/close
+  H->>H: dispose agent, delete temp cwd, log, cache
 ```
-cordis.patch.yml     preset + host bundle patch
-lib/index.js         host: agent lifecycle, RPC routes, cleanup
-lib/client.js        client: entry button, shadow composer, floating window
-lib/core.js          pure path/format/stream helpers
-test/core.test.mjs   pure helper tests
+
+The host owns the only live registry of incognito sessions. The browser never
+opens a normal DSH conversation for them, and the host never routes incognito
+prompts through the resident agent.
+
+## Requirements
+
+- DeepSeek Harness `0.2.2-rc.1` (the version this plugin was developed and
+  verified against).
+- A Web profile with the standard projection-cache service. The plugin refuses
+  to promise a zero-trace session if that service cannot be guarded.
+- A default model configured in the profile (the agent window does not expose a
+  model picker).
+
+## Project layout
+
+```text
+cordis.patch.yml       preset + host bundle patch
+lib/index.js           host: lifecycle, exact Fetch routes, cleanup
+lib/client.js          client: entry button, shadow composer, floating window
+lib/core.js            pure path/format/stream helpers
+test/core.test.mjs     pure helper tests
+docs/                  README screenshots
 ```
+
+## Development
+
+Run the pure helper tests directly:
+
+```sh
+node test/core.test.mjs
+```
+
+Host changes require a DSH restart. Client-only changes can be refreshed in the
+browser while the profile is running.
+
+## Limitations and non-goals
+
+- The model provider still receives the conversation as a normal API request.
+  Provider-side retention is outside this plugin's control.
+- Aggregate token/cost meters may record usage; they do not receive the
+  incognito transcript from this plugin, but they are not disabled.
+- Approval prompts are pinned to `never` so tools do not hang behind a missing
+  UI; tools that require interactive approval fail instead of blocking.
+- Tools that attempt to write outside the session's temporary cwd are subject
+  to DSH's normal sandbox policy.
+- Force-quitting DSH or losing the host process relies on the next boot sweep
+  to remove residual directories.
 
 ## License
 
