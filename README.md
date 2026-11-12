@@ -76,13 +76,19 @@ received no message, tool call, or transcript row.*
 
 ## Screenshots
 
-| Entry button | Incognito input bar |
-| --- | --- |
-| ![Glasses button beside the composer plus](docs/entry-button.png) | ![Dedicated incognito composer bar](docs/incognito-composer.png) |
+### Entry point
 
-The glasses button sits beside the normal composer controls. While a session
-is open, the stock composer is replaced by the incognito bar so typed text
-cannot fall through to the resident conversation.
+![Glasses button beside the composer plus](docs/entry-button.png)
+
+The glasses button sits beside the normal composer controls. Clicking it opens
+the window and swaps in the incognito bar.
+
+### Incognito input bar
+
+![Dedicated incognito composer bar](docs/incognito-composer.png)
+
+While a session is open, the stock composer is replaced by this bar, so typed
+text cannot fall through to the resident conversation.
 
 ## Install
 
