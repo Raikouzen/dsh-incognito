@@ -13,7 +13,8 @@
     "lib/",
     "cordis.patch.yml",
     "README.md",
-    "docs/"
+    "docs/",
+    "LICENSE"
   ],
   "dsh": {
     "bundle": {
@@ -31,5 +32,14 @@
     "privacy",
     "ephemeral"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "author": "Raikouzen",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Raikouzen/dsh-incognito.git"
+  },
+  "homepage": "https://github.com/Raikouzen/dsh-incognito#readme",
+  "bugs": {
+    "url": "https://github.com/Raikouzen/dsh-incognito/issues"
+  }
 }

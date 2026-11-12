@@ -3,6 +3,8 @@
 An incognito session plugin for DeepSeek Harness (DSH). It opens an
 **independent temporary agent** in a floating window beside the composer:
 
+Repository: <https://github.com/Raikouzen/dsh-incognito>
+
 ![Incognito window](docs/incognito-window.png)
 
 - one-click glasses button next to the composer plus
@@ -21,7 +23,16 @@ An incognito session plugin for DeepSeek Harness (DSH). It opens an
 
 ## Install
 
-From the plugin directory, install it as a local profile bundle:
+From GitHub, point the Web plugin manager at
+`https://github.com/Raikouzen/dsh-incognito`, or install the package spec:
+
+```sh
+dsh plugin --profile web add github:Raikouzen/dsh-incognito
+```
+
+Then select it as a profile bundle in the Web plugin manager and restart DSH.
+
+From a local checkout, install it as a profile bundle:
 
 ```sh
 dsh plugin --profile web add file:/absolute/path/to/dsh-incognito
@@ -87,4 +98,4 @@ test/core.test.mjs   pure helper tests
 
 ## License
 
-MIT.
+MIT. See [LICENSE](LICENSE).
