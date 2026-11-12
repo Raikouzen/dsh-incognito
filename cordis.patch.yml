@@ -1,0 +1,117 @@
+# dsh-incognito bundle patch.
+#
+# 1. Declare an independent agent preset. It has its own persona and its own
+#    tool composition, so nothing is inherited from the resident session.
+# 2. Mount the host half that owns the temporary session lifecycle and the
+#    exact Fetch routes used by the floating window.
+
+- insert:
+    - id: preset-incognito
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: incognito
+        name: Incognito
+        description: Independent temporary agent for the incognito floating window. Own persona, own tools, throwaway working directory, no parent context.
+        order: 30
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+                You are a coding agent powered by the {{model}} model. You are running inside an incognito session.
+
+                ## Incognito session
+                - This conversation is self-contained. You do not inherit any context, memory, messages, or prompts from a parent or any other conversation.
+                - Your working directory is a dedicated temporary directory outside the user's project. Work inside it. Do not inspect or modify the user's other files unless the user explicitly supplies them as content.
+                - The user sees this conversation only in a floating incognito window. When that window closes, this session and its working directory are permanently destroyed.
+                - Answer the user directly and use the available tools. Do not discuss the incognito mechanism unless the user asks about it.
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
+          # shell
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          # filesystem
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              applyPatch: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: true
+          # background jobs
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          # skills
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          # goals
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+          # compaction keeps long incognito turns inside the context window
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+          # delegation, workflow and ralph
+          - id: delegation
+            name: cordis:group
+            group: true
+            isolate:
+              workflowEngine: true
+            config:
+              - id: tool-subagent-control
+                name: '@deepseek-ai/dsh-tool-subagent-control'
+              - id: tool-subagent
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: spawn
+                  toolName: subagent
+              - id: tool-subagent-fork
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: fork
+                  toolName: subagent_fork
+              - id: workflow-ptc
+                name: '@deepseek-ai/dsh-workflow-ptc'
+                config:
+                  provider: spawn
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
+              - id: tool-ralph
+                name: '@deepseek-ai/dsh-tool-ralph'
+                config:
+                  subagentProvider: spawn
+                  maxRounds: 64
+          # remaining model-facing tools
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+
+    - id: dsh-incognito
+      name: 'dsh-incognito'

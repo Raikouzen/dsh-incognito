@@ -1,0 +1,35 @@
+{
+  "name": "dsh-incognito",
+  "version": "0.1.0",
+  "description": "Incognito sessions for DeepSeek Harness: an independent temporary agent in a floating window, destroyed when the window closes.",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/",
+    "cordis.patch.yml",
+    "README.md",
+    "docs/"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    },
+    "manifestVersion": 1
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "incognito",
+    "privacy",
+    "ephemeral"
+  ],
+  "license": "MIT"
+}
